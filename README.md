@@ -1,16 +1,12 @@
 # 💰 Personal Expense Tracker 
 
-A premium desktop application built with Python, Tkinter, and SQLite. Designed for high-clarity, ease of use, and professional standards.
+A desktop application built with Python, Tkinter, and SQLite. Designed for high-clarity, ease of use, and professional standards.
 
 ## ✨ Features
 
 - **✅ Full CRUD Support**: Seamlessly add, view, update, and delete expense records.
 - **🕒 Real-time **: Automatically captures the current local date and time in a human-readable 12-hour format (e.g., *January 22, 2026, 02:08 PM*).
 - **📊 CSV Export**: Save your expense data to a `.csv` file for use in Excel, Google Sheets, or for external backups.
-- **💎 Senior-Developer UI**: 
-  - Crisp, high-DPI aware typography (Segoe UI).
-  - Spacious, modern layout with enlarged input fields for clear typing.
-  - High-contrast, professional color palette (Dark Blues/Greens).
 - **🗄️ SQLite Database**: Integrated relational database for secure, local data persistence.
 
 ## 🛠️ Built With
