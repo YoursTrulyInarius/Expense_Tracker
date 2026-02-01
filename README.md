@@ -1,6 +1,7 @@
 # 💰 Personal Expense Tracker 
 
 A desktop application built with Python, Tkinter, and SQLite. Designed for high-clarity, ease of use, and professional standards.
+This project is for school purposes only.
 
 ## ✨ Features
 
