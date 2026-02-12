@@ -23,7 +23,12 @@ class ExpenseTrackerApp:
         self.root.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
         self.root.configure(bg=AppStyles.BG_PRIMARY)
         
-        self.db = Database()
+        try:
+            self.db = Database()
+        except Exception as e:
+            messagebox.showerror("Startup Error", f"Could not initialize database:\n{str(e)}")
+            self.root.destroy()
+            return
         self.selected_id = None
         
         self.setup_ui()
@@ -58,6 +63,18 @@ class ExpenseTrackerApp:
         self.main_container.grid_columnconfigure(1, weight=3) # Give more weight to the table area
         self.main_container.grid_rowconfigure(1, weight=1)
 
+    def validate_amount(self, P):
+        """Allow only digits and at most one decimal point."""
+        if P == "":
+            return True
+        try:
+            # Check if it can be a float or a trailing dot
+            if P.count('.') <= 1 and all(c.isdigit() or c == '.' for c in P):
+                return True
+            return False
+        except ValueError:
+            return False
+
     def setup_form(self):
         # Configure Style for larger entries
         style = ttk.Style()
@@ -76,12 +93,13 @@ class ExpenseTrackerApp:
         
         # Category
         tk.Label(form_inner, text="Category", bg=AppStyles.BG_SECONDARY, fg=AppStyles.TEXT_MAIN, font=AppStyles.FONT_BODY).pack(anchor="w", pady=(0, 8))
-        self.category_combo = ttk.Combobox(form_inner, values=["Food", "Transport", "Utilities", "Entertain", "Health", "Other"], width=33, style="Large.TCombobox")
+        self.category_combo = ttk.Combobox(form_inner, values=["Food", "Transport", "Utilities", "Entertain", "Health", "Other"], width=33, style="Large.TCombobox", state="readonly")
         self.category_combo.pack(fill=tk.X, pady=(0, 20))
         
         # Amount
         tk.Label(form_inner, text="Amount (₱)", bg=AppStyles.BG_SECONDARY, fg=AppStyles.TEXT_MAIN, font=AppStyles.FONT_BODY).pack(anchor="w", pady=(0, 8))
-        self.amount_entry = ttk.Entry(form_inner, width=35, style="Large.TEntry")
+        vcmd = (self.root.register(self.validate_amount), '%P')
+        self.amount_entry = ttk.Entry(form_inner, width=35, style="Large.TEntry", validate="key", validatecommand=vcmd)
         self.amount_entry.pack(fill=tk.X, pady=(0, 25))
         
         # Buttons
@@ -209,16 +227,25 @@ class ExpenseTrackerApp:
         category = self.category_combo.get().strip()
         amount = self.amount_entry.get().strip()
         
-        if not all([item, category, amount]):
-            messagebox.showwarning("Validation Error", "All fields are required!")
+        errors = []
+        if not item:
+            errors.append("- Description cannot be empty or blank.")
+        if not category:
+            errors.append("- Please select a category.")
+        if not amount:
+            errors.append("- Amount cannot be empty or blank.")
+            
+        if errors:
+            messagebox.showwarning("Validation Error", "Please fix the following:\n" + "\n".join(errors))
             return None
             
         try:
             amount_val = float(amount)
             if amount_val <= 0:
-                raise ValueError
+                messagebox.showwarning("Validation Error", "Amount must be a positive number!")
+                return None
         except ValueError:
-            messagebox.showwarning("Validation Error", "Amount must be a positive number!")
+            messagebox.showwarning("Validation Error", "Amount must be a valid number!")
             return None
             
         return (item, category, amount_val)

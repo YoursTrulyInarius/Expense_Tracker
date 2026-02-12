@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import sys
 from datetime import datetime
 
 class Database:
@@ -33,45 +34,81 @@ class Database:
 
     def add_expense(self, item, category, amount):
         """Add a new expense to the database with automatic local timestamp (Philippines)."""
+        # Basic secondary validation
+        if not item or not item.strip():
+            raise ValueError("Item description cannot be empty or blank.")
+        if not category or not category.strip():
+            raise ValueError("Category cannot be empty or blank.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive number.")
+
         local_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO expenses (timestamp, item, category, amount)
-                VALUES (?, ?, ?, ?)
-            ''', (local_time, item, category, amount))
-            conn.commit()
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO expenses (timestamp, item, category, amount)
+                    VALUES (?, ?, ?, ?)
+                ''', (local_time, item.strip(), category.strip(), amount))
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"Database error in add_expense: {e}", file=sys.stderr)
+            raise
 
     def fetch_all_expenses(self):
         """Fetch all expenses from the database, ordered by timestamp."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM expenses ORDER BY timestamp DESC')
-            return cursor.fetchall()
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM expenses ORDER BY timestamp DESC')
+                return cursor.fetchall()
+        except sqlite3.Error as e:
+            print(f"Database error in fetch_all_expenses: {e}", file=sys.stderr)
+            return []
 
     def update_expense(self, expense_id, item, category, amount):
         """Update an existing expense (updates timestamp to current Philippines time)."""
+        # Basic secondary validation
+        if not item or not item.strip():
+            raise ValueError("Item description cannot be empty or blank.")
+        if not category or not category.strip():
+            raise ValueError("Category cannot be empty or blank.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive number.")
+
         local_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE expenses
-                SET timestamp = ?, item = ?, category = ?, amount = ?
-                WHERE id = ?
-            ''', (local_time, item, category, amount, expense_id))
-            conn.commit()
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE expenses
+                    SET timestamp = ?, item = ?, category = ?, amount = ?
+                    WHERE id = ?
+                ''', (local_time, item.strip(), category.strip(), amount, expense_id))
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"Database error in update_expense: {e}", file=sys.stderr)
+            raise
 
     def delete_expense(self, expense_id):
         """Delete an expense from the database."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM expenses WHERE id = ?', (expense_id,))
-            conn.commit()
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM expenses WHERE id = ?', (expense_id,))
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"Database error in delete_expense: {e}", file=sys.stderr)
+            raise
 
     def get_total_expenses(self):
         """Calculate the total of all expenses."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT SUM(amount) FROM expenses')
-            result = cursor.fetchone()
-            return result[0] if result[0] else 0.0
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT SUM(amount) FROM expenses')
+                result = cursor.fetchone()
+                return result[0] if result and result[0] else 0.0
+        except sqlite3.Error as e:
+            print(f"Database error in get_total_expenses: {e}", file=sys.stderr)
+            return 0.0
