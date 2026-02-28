@@ -1,18 +1,22 @@
-# 💰 Personal Expense Tracker 
+# 💰 Personal Expense Tracker
 
-A desktop application built with Python, Tkinter, and SQLite. Designed for high-clarity, ease of use, and professional standards. 
+A desktop application built with Python, Tkinter, and SQLite. Designed for high-clarity, ease of use, and professional standards.
 
 ## ✨ Features
 
 - **✅ Full CRUD Support**: Seamlessly add, view, update, and delete expense records.
-- **🕒 Real-time **: Automatically captures the current local date and time in a human-readable 12-hour format (e.g., *January 22, 2026, 02:08 PM*).
+- **🔍 Live Search**: Filter expenses in real-time by typing any part of the description.
+- **🗂️ Category Filter**: Narrow down records by category (Food, Transport, Utilities, etc.) with a single dropdown selection. Works alongside the search box.
+- **🚫 Duplicate Validation**: Detects identical entries (same description, category, and amount) before inserting and prompts for confirmation.
+- **🗑️ Multiple Delete**: Select multiple rows using `Ctrl+Click` or `Shift+Click` and delete them all at once with a single confirmation.
+- **🕒 Auto Timestamp**: Automatically captures the current local date and time in a human-readable 12-hour format (e.g., *January 22, 2026, 02:08 PM*).
 - **📊 CSV Export**: Save your expense data to a `.csv` file for use in Excel, Google Sheets, or for external backups.
 - **🗄️ SQLite Database**: Integrated relational database for secure, local data persistence.
 
 ## 🛠️ Built With
 
 - **Python**: Core application logic.
-- **Tkinter**: Modern GUI framework with custom "Senior Developer" styling.
+- **Tkinter**: Modern GUI framework with custom styling.
 - **SQLite**: Reliable, serverless database engine.
 
 ## 🚀 Getting Started
@@ -33,7 +37,7 @@ A desktop application built with Python, Tkinter, and SQLite. Designed for high-
 ## 📂 Project Structure
 
 - `main.py`: The heart of the app—handles UI and application logic.
-- `database.py`: Manages SQLite connections and local-time timestamping.
+- `database.py`: Manages SQLite connections, queries, and data validation.
 - `app_styles.py`: Contains the design system, colors, and font tokens.
 - `expenses.db`: Your local database file (automatically created on first run).
 
@@ -43,5 +47,3 @@ Click the **"Export to CSV"** button in the sidebar to save your entire expense 
 
 ---
 *Developed by sonjebgwapo*
-
-## 90% 

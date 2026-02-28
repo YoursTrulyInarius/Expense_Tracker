@@ -30,6 +30,10 @@ class ExpenseTrackerApp:
             self.root.destroy()
             return
         self.selected_id = None
+
+        # Search/filter state variables
+        self.search_var = tk.StringVar()
+        self.filter_var = tk.StringVar(value="All")
         
         self.setup_ui()
         self.refresh_data()
@@ -60,7 +64,7 @@ class ExpenseTrackerApp:
         self.setup_table()
         
         # Configure grid expansion
-        self.main_container.grid_columnconfigure(1, weight=3) # Give more weight to the table area
+        self.main_container.grid_columnconfigure(1, weight=3)
         self.main_container.grid_rowconfigure(1, weight=1)
 
     def validate_amount(self, P):
@@ -68,7 +72,6 @@ class ExpenseTrackerApp:
         if P == "":
             return True
         try:
-            # Check if it can be a float or a trailing dot
             if P.count('.') <= 1 and all(c.isdigit() or c == '.' for c in P):
                 return True
             return False
@@ -76,15 +79,12 @@ class ExpenseTrackerApp:
             return False
 
     def setup_form(self):
-        # Configure Style for larger entries
         style = ttk.Style()
         style.configure("Large.TEntry", padding=AppStyles.ENTRY_PADDING)
         style.configure("Large.TCombobox", padding=AppStyles.ENTRY_PADDING)
 
         form_inner = tk.Frame(self.form_frame, bg=AppStyles.BG_SECONDARY, padx=30, pady=30)
         form_inner.pack(fill=tk.BOTH, expand=True)
-        
-        # Removed Date Entry as it's now automatic
         
         # Item
         tk.Label(form_inner, text="Description", bg=AppStyles.BG_SECONDARY, fg=AppStyles.TEXT_MAIN, font=AppStyles.FONT_BODY).pack(anchor="w", pady=(0, 8))
@@ -117,7 +117,7 @@ class ExpenseTrackerApp:
             btn_frame, text="Update", command=self.update_expense,
             bg=AppStyles.SUCCESS_COLOR, fg=AppStyles.TEXT_ON_DARK,
             activebackground=AppStyles.SUCCESS_COLOR, activeforeground=AppStyles.TEXT_ON_DARK,
-            disabledforeground="#CCCCCC", # Light gray when disabled, white when active
+            disabledforeground="#CCCCCC",
             font=AppStyles.FONT_HEADER, relief="flat", padx=15, pady=10, cursor="hand2",
             state=tk.DISABLED
         )
@@ -138,30 +138,81 @@ class ExpenseTrackerApp:
         )
         self.export_btn.pack(fill=tk.X, pady=(10, 0))
 
+    def setup_toolbar(self):
+        """Build the search & filter toolbar above the Treeview."""
+        toolbar = tk.Frame(self.table_frame, bg=AppStyles.BG_PRIMARY, pady=8, padx=8)
+        toolbar.pack(fill=tk.X, side=tk.TOP)
+
+        # --- Search ---
+        tk.Label(
+            toolbar, text="🔍 Search:", bg=AppStyles.BG_PRIMARY,
+            fg=AppStyles.TEXT_MAIN, font=AppStyles.FONT_BODY
+        ).pack(side=tk.LEFT, padx=(0, 6))
+
+        search_entry = ttk.Entry(toolbar, textvariable=self.search_var, width=22)
+        search_entry.pack(side=tk.LEFT, padx=(0, 18))
+        self.search_var.trace_add("write", lambda *_: self.refresh_data())
+
+        # --- Category Filter ---
+        tk.Label(
+            toolbar, text="Filter:", bg=AppStyles.BG_PRIMARY,
+            fg=AppStyles.TEXT_MAIN, font=AppStyles.FONT_BODY
+        ).pack(side=tk.LEFT, padx=(0, 6))
+
+        filter_combo = ttk.Combobox(
+            toolbar,
+            textvariable=self.filter_var,
+            values=["All", "Food", "Transport", "Utilities", "Entertain", "Health", "Other"],
+            width=14,
+            state="readonly"
+        )
+        filter_combo.pack(side=tk.LEFT, padx=(0, 12))
+        filter_combo.bind("<<ComboboxSelected>>", lambda _: self.refresh_data())
+
+        # --- Clear Filters ---
+        tk.Button(
+            toolbar, text="✕ Clear Filters", command=self.clear_filters,
+            bg=AppStyles.TEXT_MUTED, fg=AppStyles.TEXT_ON_DARK,
+            font=AppStyles.FONT_BODY, relief="flat", padx=10, pady=4, cursor="hand2"
+        ).pack(side=tk.LEFT)
+
+    def clear_filters(self):
+        """Reset search and filter controls."""
+        self.search_var.set("")
+        self.filter_var.set("All")
+        self.refresh_data()
+
     def setup_table(self):
+        # Set up toolbar first (sits above the Treeview)
+        self.setup_toolbar()
+
         # Table Styling
         style = ttk.Style()
-        style.configure("Treeview", font=AppStyles.FONT_BODY, rowheight=35) # Increased rowheight
+        style.configure("Treeview", font=AppStyles.FONT_BODY, rowheight=35)
         style.configure("Treeview.Heading", font=AppStyles.FONT_HEADER)
         
         # Container for Treeview and Scrollbar
         tree_scroll_frame = tk.Frame(self.table_frame, bg=AppStyles.BG_SECONDARY)
         tree_scroll_frame.pack(fill=tk.BOTH, expand=True)
 
-        # ID is still in columns but not in show="headings" logic or shown visually
-        self.tree = ttk.Treeview(tree_scroll_frame, columns=("ID", "Timestamp", "Description", "Category", "Amount"), show="headings")
+        # extended selectmode enables Ctrl+Click / Shift+Click multi-select
+        self.tree = ttk.Treeview(
+            tree_scroll_frame,
+            columns=("ID", "Timestamp", "Description", "Category", "Amount"),
+            show="headings",
+            selectmode="extended"
+        )
         
         # Scrollbar
         scrollbar = ttk.Scrollbar(tree_scroll_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         
-        # self.tree.heading("ID", text="ID") # Removed
         self.tree.heading("Timestamp", text="Date & Time")
         self.tree.heading("Description", text="Description")
         self.tree.heading("Category", text="Category")
         self.tree.heading("Amount", text="Amount")
         
-        self.tree.column("ID", width=0, stretch=tk.NO) # Hide ID column
+        self.tree.column("ID", width=0, stretch=tk.NO)
         self.tree.column("Timestamp", width=220, anchor="center", stretch=tk.NO)
         self.tree.column("Description", width=250, minwidth=150, stretch=tk.YES)
         self.tree.column("Category", width=130, anchor="center", stretch=tk.NO)
@@ -172,7 +223,7 @@ class ExpenseTrackerApp:
         
         self.tree.bind("<<TreeviewSelect>>", self.on_item_select)
         
-        # Delete Button and Total
+        # Bottom bar: Delete button + Total label
         bottom_frame = tk.Frame(self.table_frame, bg=AppStyles.BG_PRIMARY, pady=10)
         bottom_frame.pack(fill=tk.X)
         
@@ -182,6 +233,13 @@ class ExpenseTrackerApp:
             font=AppStyles.FONT_BODY, relief="flat", padx=15, pady=5, cursor="hand2"
         )
         self.delete_btn.pack(side=tk.LEFT)
+
+        # Selection info label (shows count when >1 rows selected)
+        self.selection_label = tk.Label(
+            bottom_frame, text="", font=AppStyles.FONT_BODY,
+            bg=AppStyles.BG_PRIMARY, fg=AppStyles.TEXT_MUTED
+        )
+        self.selection_label.pack(side=tk.LEFT, padx=12)
         
         self.total_label = tk.Label(
             bottom_frame, text="Total: ₱0.00", font=AppStyles.FONT_TITLE,
@@ -190,27 +248,36 @@ class ExpenseTrackerApp:
         self.total_label.pack(side=tk.RIGHT)
 
     def on_item_select(self, event):
-        selected = self.tree.focus()
-        if not selected:
+        selected = self.tree.selection()
+        count = len(selected)
+
+        if count == 0:
+            self.selection_label.config(text="")
             return
-            
-        values = self.tree.item(selected, "values")
-        self.selected_id = values[0]
-        
-        # values[1] is Timestamp, no entry for it now
-        
-        self.item_entry.delete(0, tk.END)
-        self.item_entry.insert(0, values[2])
-        
-        self.category_combo.set(values[3])
-        
-        # Clean amount string for entry
-        amount_clean = values[4].replace("₱", "").replace(",", "")
-        self.amount_entry.delete(0, tk.END)
-        self.amount_entry.insert(0, amount_clean)
-        
-        self.add_btn.config(state=tk.DISABLED)
-        self.update_btn.config(state=tk.NORMAL)
+
+        if count == 1:
+            # Single selection: populate form
+            self.selection_label.config(text="")
+            values = self.tree.item(selected[0], "values")
+            self.selected_id = values[0]
+
+            self.item_entry.delete(0, tk.END)
+            self.item_entry.insert(0, values[2])
+
+            self.category_combo.set(values[3])
+
+            amount_clean = values[4].replace("₱", "").replace(",", "")
+            self.amount_entry.delete(0, tk.END)
+            self.amount_entry.insert(0, amount_clean)
+
+            self.add_btn.config(state=tk.DISABLED)
+            self.update_btn.config(state=tk.NORMAL)
+        else:
+            # Multiple selection: show count, disable form editing
+            self.selection_label.config(text=f"{count} rows selected")
+            self.selected_id = None
+            self.add_btn.config(state=tk.DISABLED)
+            self.update_btn.config(state=tk.DISABLED)
 
     def clear_form(self):
         self.selected_id = None
@@ -220,6 +287,7 @@ class ExpenseTrackerApp:
         
         self.add_btn.config(state=tk.NORMAL)
         self.update_btn.config(state=tk.DISABLED)
+        self.selection_label.config(text="")
         self.tree.selection_remove(self.tree.selection())
 
     def validate_inputs(self):
@@ -253,8 +321,23 @@ class ExpenseTrackerApp:
     def add_expense(self):
         data = self.validate_inputs()
         if data:
+            item, category, amount_val = data
+
+            # --- Duplicate Validation ---
+            if self.db.check_duplicate(item, category, amount_val):
+                proceed = messagebox.askyesno(
+                    "Duplicate Entry",
+                    f"A similar expense already exists:\n\n"
+                    f"  Description : {item}\n"
+                    f"  Category    : {category}\n"
+                    f"  Amount      : ₱{amount_val:,.2f}\n\n"
+                    "Do you still want to add it?"
+                )
+                if not proceed:
+                    return
+
             try:
-                self.db.add_expense(*data)
+                self.db.add_expense(item, category, amount_val)
                 self.refresh_data()
                 self.clear_form()
                 messagebox.showinfo("Success", "Expense added successfully!")
@@ -276,13 +359,23 @@ class ExpenseTrackerApp:
                 messagebox.showerror("Error", f"Database error: {str(e)}")
 
     def delete_expense(self):
-        if not self.selected_id:
-            messagebox.showwarning("Selection", "Please select an item to delete.")
+        """Delete one or more selected expenses."""
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Selection", "Please select at least one item to delete.")
             return
-            
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this expense?"):
+
+        count = len(selected)
+        confirm_msg = (
+            f"Are you sure you want to delete {count} expense(s)?"
+            if count > 1
+            else "Are you sure you want to delete this expense?"
+        )
+
+        if messagebox.askyesno("Confirm Delete", confirm_msg):
             try:
-                self.db.delete_expense(self.selected_id)
+                ids = [self.tree.item(row, "values")[0] for row in selected]
+                self.db.delete_multiple_expenses(ids)
                 self.refresh_data()
                 self.clear_form()
             except Exception as e:
@@ -311,31 +404,40 @@ class ExpenseTrackerApp:
                 messagebox.showerror("Error", f"Failed to export: {str(e)}")
 
     def refresh_data(self):
+        """Reload the Treeview applying current search and filter values."""
         # Clear table
         for item in self.tree.get_children():
             self.tree.delete(item)
-            
-        # Fetch from DB
-        expenses = self.db.fetch_all_expenses()
+        
+        # Read current search/filter state
+        search = self.search_var.get()
+        category = self.filter_var.get()
+
+        # Fetch from DB with filters applied
+        expenses = self.db.fetch_filtered_expenses(
+            category=category if category != "All" else None,
+            search=search if search.strip() else None
+        )
+
         for exp in expenses:
-            # Format timestamp: SQLite format "YYYY-MM-DD HH:MM:SS" -> "January 22, 2026, 01:56 PM"
             try:
                 dt_obj = datetime.strptime(exp[1], "%Y-%m-%d %H:%M:%S")
                 formatted_date = dt_obj.strftime("%B %d, %Y, %I:%M %p")
             except:
-                formatted_date = exp[1] # Fallback
+                formatted_date = exp[1]
                 
-            # Format amount as currency
             formatted_amount = f"₱{exp[4]:,.2f}"
             self.tree.insert("", tk.END, values=(exp[0], formatted_date, exp[2], exp[3], formatted_amount))
-            
-        # Update Total
-        total = self.db.get_total_expenses()
+        
+        # Update Total (filtered)
+        total = self.db.get_total_expenses(
+            category=category if category != "All" else None,
+            search=search if search.strip() else None
+        )
         self.total_label.config(text=f"Total: ₱{total:,.2f}")
 
 if __name__ == "__main__":
     root = tk.Tk()
-    # Simple fix for blurry text on high DPI Windows displays
     try:
         from ctypes import windll
         windll.shcore.SetProcessDpiAwareness(1)

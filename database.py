@@ -32,6 +32,21 @@ class Database:
             ''')
             conn.commit()
 
+    def check_duplicate(self, item, category, amount):
+        """Check if an identical expense (same description, category, amount) already exists."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT COUNT(*) FROM expenses WHERE item = ? AND category = ? AND amount = ?',
+                    (item.strip(), category.strip(), amount)
+                )
+                count = cursor.fetchone()[0]
+                return count > 0
+        except sqlite3.Error as e:
+            print(f"Database error in check_duplicate: {e}", file=sys.stderr)
+            return False
+
     def add_expense(self, item, category, amount):
         """Add a new expense to the database with automatic local timestamp (Philippines)."""
         # Basic secondary validation
@@ -66,6 +81,29 @@ class Database:
             print(f"Database error in fetch_all_expenses: {e}", file=sys.stderr)
             return []
 
+    def fetch_filtered_expenses(self, category=None, search=None):
+        """Fetch expenses filtered by category and/or description keyword."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                query = 'SELECT * FROM expenses WHERE 1=1'
+                params = []
+
+                if category and category != "All":
+                    query += ' AND category = ?'
+                    params.append(category)
+
+                if search and search.strip():
+                    query += ' AND item LIKE ?'
+                    params.append(f'%{search.strip()}%')
+
+                query += ' ORDER BY timestamp DESC'
+                cursor.execute(query, params)
+                return cursor.fetchall()
+        except sqlite3.Error as e:
+            print(f"Database error in fetch_filtered_expenses: {e}", file=sys.stderr)
+            return []
+
     def update_expense(self, expense_id, item, category, amount):
         """Update an existing expense (updates timestamp to current Philippines time)."""
         # Basic secondary validation
@@ -91,7 +129,7 @@ class Database:
             raise
 
     def delete_expense(self, expense_id):
-        """Delete an expense from the database."""
+        """Delete a single expense from the database."""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -101,12 +139,37 @@ class Database:
             print(f"Database error in delete_expense: {e}", file=sys.stderr)
             raise
 
-    def get_total_expenses(self):
-        """Calculate the total of all expenses."""
+    def delete_multiple_expenses(self, ids):
+        """Delete multiple expenses by a list of IDs."""
+        if not ids:
+            return
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT SUM(amount) FROM expenses')
+                placeholders = ','.join('?' for _ in ids)
+                cursor.execute(f'DELETE FROM expenses WHERE id IN ({placeholders})', ids)
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"Database error in delete_multiple_expenses: {e}", file=sys.stderr)
+            raise
+
+    def get_total_expenses(self, category=None, search=None):
+        """Calculate the total of filtered expenses."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                query = 'SELECT SUM(amount) FROM expenses WHERE 1=1'
+                params = []
+
+                if category and category != "All":
+                    query += ' AND category = ?'
+                    params.append(category)
+
+                if search and search.strip():
+                    query += ' AND item LIKE ?'
+                    params.append(f'%{search.strip()}%')
+
+                cursor.execute(query, params)
                 result = cursor.fetchone()
                 return result[0] if result and result[0] else 0.0
         except sqlite3.Error as e:
