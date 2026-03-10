@@ -45,5 +45,4 @@ A desktop application built with Python, Tkinter, and SQLite. Designed for high-
 
 Click the **"Export to CSV"** button in the sidebar to save your entire expense history. The file will be pre-named with the current date for easy organization.
 
----
-*Developed by 
+
